@@ -4,6 +4,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import debutImg from "@/assets/samad-wicket.jpg";
 import centuryImg from "@/assets/samad-mca.jpg";
 import trophyImg from "@/assets/samad-titans.jpg";
+import awardImg from "@/assets/sd.jpeg"
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -13,7 +14,7 @@ const phases = [
     title: "First-Class Beginnings",
     place: "Ranji Trophy · Debut",
     body: "A young left-arm medium pacer with a smooth run-up. The Maharashtra circuit got its first taste — and the wickets started to fall.",
-    image: debutImg,
+    image: trophyImg,
   },
   {
     year: "2013",
@@ -27,7 +28,7 @@ const phases = [
     title: "Legends League Cricket",
     place: "Eagle Nashik Titans",
     body: "From Ranji grounds to LLC stages — sharing the dressing room with legends. The journey from maidans to floodlights, written in 287 first-class wickets.",
-    image: trophyImg,
+    image: awardImg,
   },
 ];
 
