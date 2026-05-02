@@ -66,13 +66,12 @@ const Journey = () => {
         const text = phase.querySelectorAll<HTMLElement>("[data-phase-text]");
         const year = phase.querySelector<HTMLElement>("[data-phase-year]");
 
-        // Stronger scroll parallax on image
+        // Parallax on image — removed scale so full image stays visible
         gsap.fromTo(
           img,
-          { scale: 1.3, yPercent: 18 },
+          { yPercent: 10 },
           {
-            scale: 1.05,
-            yPercent: -18,
+            yPercent: -10,
             ease: "none",
             scrollTrigger: { trigger: phase, start: "top bottom", end: "bottom top", scrub: true },
           }
@@ -100,7 +99,7 @@ const Journey = () => {
           scrollTrigger: { trigger: phase, start: "top 65%" },
         });
 
-        // PERF: Mouse parallax inside each phase image card — use quickTo
+        // Mouse parallax inside each phase image card
         const card = phase.querySelector<HTMLElement>("[data-phase-card]");
         if (card && img) {
           const qX = gsap.quickTo(img, "x", { duration: 0.7, ease: "power3.out" });
@@ -126,7 +125,7 @@ const Journey = () => {
 
   return (
     <section id="journey" ref={sectionRef} className="relative overflow-hidden bg-background py-32 md:py-48">
-      {/* Multi-layer parallax bg orbs — PERF: reduced blur from 100-140px to 60-80px */}
+      {/* Multi-layer parallax bg orbs */}
       <div data-jn-bg-deep className="pointer-events-none absolute -left-40 top-[10%] h-[560px] w-[560px] rounded-full bg-primary/10 blur-[80px]" />
       <div data-jn-bg-mid className="pointer-events-none absolute right-[-15%] top-[55%] h-[480px] w-[480px] rounded-full bg-accent/10 blur-[70px]" />
       <div data-jn-bg-deep className="pointer-events-none absolute left-[35%] bottom-[5%] h-[360px] w-[360px] rounded-full bg-primary/8 blur-[60px]" />
@@ -151,13 +150,13 @@ const Journey = () => {
             >
               <div className="relative md:col-span-7">
                 <div data-phase-card className="relative aspect-[4/3] overflow-hidden rounded-sm bg-surface">
-                  <div data-phase-img className="absolute -inset-6 will-change-transform">
+                  <div data-phase-img className="absolute inset-0 will-change-transform">
                     <img
                       src={p.image}
                       alt={p.title}
                       loading="lazy"
                       decoding="async"
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-contain"
                       width={1400}
                       height={900}
                     />
