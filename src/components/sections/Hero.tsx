@@ -48,18 +48,32 @@ const Hero = () => {
         { filter: "blur(0px) hue-rotate(0deg)", duration: 1.4, ease: "expo.out", delay: 0.2 }
       );
 
-      // Mouse parallax — multi-layer with varying depth coefficients
+      // PERF: Mouse parallax — use gsap.quickTo() for efficient per-frame updates
+      // instead of creating new gsap.to() tweens on every mousemove event.
+      const imgQX = gsap.quickTo(imgRef.current!, "x", { duration: 1.1, ease: "power3.out" });
+      const imgQY = gsap.quickTo(imgRef.current!, "y", { duration: 1.1, ease: "power3.out" });
+      const titleQX = gsap.quickTo(title, "x", { duration: 1.4, ease: "power3.out" });
+      const titleQY = gsap.quickTo(title, "y", { duration: 1.4, ease: "power3.out" });
+
+      const deepEls = gsap.utils.toArray<HTMLElement>("[data-parallax-deep]");
+      const midEls = gsap.utils.toArray<HTMLElement>("[data-parallax-mid]");
+      const shallowEls = gsap.utils.toArray<HTMLElement>("[data-parallax-shallow]");
+      const fgEls = gsap.utils.toArray<HTMLElement>("[data-parallax-fg]");
+
       const onMove = (e: MouseEvent) => {
         const x = (e.clientX / window.innerWidth - 0.5) * 2;
         const y = (e.clientY / window.innerHeight - 0.5) * 2;
-        gsap.to(imgRef.current, { x: x * 50, y: y * 35, duration: 1.1, ease: "power3.out" });
-        gsap.to("[data-parallax-deep]", { x: x * 110, y: y * 70, duration: 1.3, ease: "power3.out" });
-        gsap.to("[data-parallax-mid]", { x: x * 60, y: y * 40, duration: 1.1, ease: "power3.out" });
-        gsap.to("[data-parallax-shallow]", { x: x * 25, y: y * 16, duration: 0.9, ease: "power3.out" });
-        gsap.to("[data-parallax-fg]", { x: x * -40, y: y * -25, duration: 1, ease: "power3.out" });
-        gsap.to(title, { x: x * -10, y: y * -6, duration: 1.4, ease: "power3.out" });
+        imgQX(x * 50);
+        imgQY(y * 35);
+        titleQX(x * -10);
+        titleQY(y * -6);
+        // Batch remaining with a single gsap.to per group
+        gsap.to(deepEls, { x: x * 110, y: y * 70, duration: 1.3, ease: "power3.out", overwrite: "auto" });
+        gsap.to(midEls, { x: x * 60, y: y * 40, duration: 1.1, ease: "power3.out", overwrite: "auto" });
+        gsap.to(shallowEls, { x: x * 25, y: y * 16, duration: 0.9, ease: "power3.out", overwrite: "auto" });
+        gsap.to(fgEls, { x: x * -40, y: y * -25, duration: 1, ease: "power3.out", overwrite: "auto" });
       };
-      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mousemove", onMove, { passive: true });
 
       // Scroll-triggered multi-layer depth
       ScrollTrigger.create({
@@ -100,6 +114,8 @@ const Hero = () => {
           className="h-full w-full scale-105 object-cover object-[70%_center] md:object-[75%_center]"
           width={1920}
           height={1080}
+          fetchpriority="high"
+          decoding="async"
         />
         {/* Left-side darken so the massive title stays readable */}
         <div className="absolute inset-0 bg-gradient-to-r from-background via-background/70 to-background/10 md:from-background/95 md:via-background/50 md:to-transparent" />
@@ -108,10 +124,10 @@ const Hero = () => {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_45%,hsl(var(--primary)/0.35),transparent_55%)] mix-blend-screen" />
       </div>
 
-      {/* DEEP layer — slow drifting orbs (farthest back) */}
+      {/* DEEP layer — slow drifting orbs (farthest back) — PERF: reduced blur from 120-140px to 80-90px */}
       <div data-parallax-deep className="pointer-events-none absolute inset-0 -z-[6]">
-        <div className="absolute left-[10%] top-[20%] h-[420px] w-[420px] rounded-full bg-primary/15 blur-[120px]" />
-        <div className="absolute right-[15%] bottom-[10%] h-[520px] w-[520px] rounded-full bg-accent/12 blur-[140px]" />
+        <div className="absolute left-[10%] top-[20%] h-[420px] w-[420px] rounded-full bg-primary/15 blur-[80px]" />
+        <div className="absolute right-[15%] bottom-[10%] h-[520px] w-[520px] rounded-full bg-accent/12 blur-[90px]" />
       </div>
 
       {/* MID layer — sweeping vertical accent lines */}
@@ -119,10 +135,10 @@ const Hero = () => {
       <div data-parallax-mid className="pointer-events-none absolute right-[12%] top-0 -z-[4] h-full w-px bg-gradient-to-b from-transparent via-primary/40 to-transparent" />
       <div data-parallax-shallow className="pointer-events-none absolute left-[22%] top-0 -z-[4] h-full w-px bg-gradient-to-b from-transparent via-foreground/15 to-transparent" />
 
-      {/* Stadium light beams */}
+      {/* Stadium light beams — PERF: reduced blur from 3xl (48px) to 2xl (40px) */}
       <div data-parallax-deep className="absolute inset-0 -z-[5] opacity-40 mix-blend-screen">
-        <div className="absolute -left-1/4 top-0 h-[140%] w-[60%] rotate-12 bg-gradient-to-b from-accent/20 via-transparent to-transparent blur-3xl" />
-        <div className="absolute -right-1/4 top-0 h-[140%] w-[60%] -rotate-12 bg-gradient-to-b from-primary/20 via-transparent to-transparent blur-3xl" />
+        <div className="absolute -left-1/4 top-0 h-[140%] w-[60%] rotate-12 bg-gradient-to-b from-accent/20 via-transparent to-transparent blur-2xl" />
+        <div className="absolute -right-1/4 top-0 h-[140%] w-[60%] -rotate-12 bg-gradient-to-b from-primary/20 via-transparent to-transparent blur-2xl" />
       </div>
 
       {/* FOREGROUND parallax — Lottie cricket ball drifts opposite to mouse */}
@@ -135,13 +151,13 @@ const Hero = () => {
 
       <div ref={layersRef} className="container relative z-10 flex h-full flex-col justify-end pb-16 pt-32">
         {/* Top meta row */}
-        <div data-hero-fade className="absolute left-6 top-32 hidden flex-col gap-2 md:left-12 md:flex">
+        <div data-hero-fade className="absolute left-6 top-32 hidden flex-col gap-2 rounded-sm border border-white/5 bg-background/20 p-4 backdrop-blur-md md:left-12 md:flex">
           <span className="eyebrow">Innings 001 / Live</span>
           <span className="font-condensed text-xs uppercase tracking-[0.4em] text-muted-foreground">
             Wankhede · 22:14 IST
           </span>
         </div>
-        <div data-hero-fade className="absolute right-6 top-32 hidden flex-col items-end gap-2 md:right-12 md:flex">
+        <div data-hero-fade className="absolute right-6 top-32 hidden flex-col items-end gap-2 rounded-sm border border-white/5 bg-background/20 p-4 backdrop-blur-md md:right-12 md:flex">
           <span className="font-display text-sm tracking-[0.3em] text-accent">Left-Arm Medium · Indian Cricketer</span>
           <span className="font-condensed text-xs uppercase tracking-[0.4em] text-muted-foreground">
             287 First-Class Wickets

@@ -20,7 +20,9 @@ export function useLenis() {
       lenis.raf(time * 1000);
     };
     gsap.ticker.add(raf);
-    gsap.ticker.lagSmoothing(0);
+    // PERF: Re-enable lag smoothing — lagSmoothing(0) was disabling
+    // GSAP's frame-skip detection, causing stutter on slower devices.
+    // Default threshold (500ms, 33ms) lets GSAP skip frames gracefully.
 
     return () => {
       gsap.ticker.remove(raf);

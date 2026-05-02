@@ -249,16 +249,17 @@ const StoryReel = () => {
                 src={p.img}
                 alt={p.title}
                 loading={i === 0 ? "eager" : "lazy"}
+                decoding="async"
                 className="h-full w-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-background/40" />
               <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_50%,hsl(var(--primary)/0.35),transparent_60%)] mix-blend-screen" />
             </div>
 
-            {/* MID layer — orbs */}
+            {/* MID layer — orbs — PERF: reduced blur from 120-140px to 70-80px */}
             <div data-reel-mid className="pointer-events-none absolute inset-0 will-change-transform">
-              <div className="absolute left-[10%] top-[20%] h-[420px] w-[420px] rounded-full bg-accent/15 blur-[120px]" />
-              <div className="absolute right-[8%] bottom-[12%] h-[480px] w-[480px] rounded-full bg-primary/15 blur-[140px]" />
+              <div className="absolute left-[10%] top-[20%] h-[420px] w-[420px] rounded-full bg-accent/15 blur-[70px]" />
+              <div className="absolute right-[8%] bottom-[12%] h-[480px] w-[480px] rounded-full bg-primary/15 blur-[80px]" />
             </div>
 
             {/* SHALLOW layer — accent rules */}

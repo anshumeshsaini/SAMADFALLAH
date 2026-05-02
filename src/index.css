@@ -78,12 +78,14 @@
 
   html {
     scroll-behavior: auto; /* lenis handles it */
+    -webkit-tap-highlight-color: transparent;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Barlow', system-ui, sans-serif;
     overflow-x: hidden;
+    text-rendering: optimizeLegibility;
   }
 
   /* Hide native cursor on devices with fine pointer (custom cursor takes over) */
@@ -101,6 +103,27 @@
   h1, h2, h3, h4, .font-display {
     font-family: 'Bebas Neue', 'Barlow Condensed', system-ui, sans-serif;
     letter-spacing: 0.01em;
+  }
+
+  /* Accessible focus ring — visible on keyboard nav, hidden on mouse */
+  :focus-visible {
+    outline: 2px solid hsl(var(--accent));
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* Smooth image loading */
+  img {
+    content-visibility: auto;
+  }
+
+  /* PERF: Skip rendering paint for sections far below the viewport */
+  section {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 100vh;
   }
 
   /* Lenis */
@@ -124,25 +147,43 @@
     mix-blend-mode: multiply;
   }
 
-  /* Grain overlay */
+  /* Grain overlay — PERF: reduced area from inset:-100% to inset:-30%,
+     lowered opacity, and use transform3d to promote to own compositor layer */
   .grain::after {
     content: "";
     position: fixed;
-    inset: -100%;
+    inset: -30%;
     pointer-events: none;
     z-index: 100;
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.6 0 0 0 0 0.7 0 0 0 0 0.9 0 0 0 0.5 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/></svg>");
-    opacity: 0.12;
+    opacity: 0.08;
     mix-blend-mode: overlay;
-    animation: grain-shift 1.6s steps(6) infinite;
+    animation: grain-shift 2s steps(4) infinite;
+    will-change: transform;
+    transform: translateZ(0);
+  }
+
+  /* Disable heavy grain animation for users who prefer reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .grain::after {
+      animation: none;
+    }
+  }
+
+  /* PERF: On mobile / low-end devices, simplify grain to static (no animation) */
+  @media (max-width: 768px) {
+    .grain::after {
+      inset: 0;
+      animation: none;
+      opacity: 0.05;
+    }
   }
 
   @keyframes grain-shift {
-    0%, 100% { transform: translate(0, 0); }
-    20% { transform: translate(-3%, 5%); }
-    40% { transform: translate(2%, -4%); }
-    60% { transform: translate(-1%, 3%); }
-    80% { transform: translate(4%, 1%); }
+    0%, 100% { transform: translate3d(0, 0, 0); }
+    25% { transform: translate3d(-2%, 3%, 0); }
+    50% { transform: translate3d(1%, -2%, 0); }
+    75% { transform: translate3d(-1%, 1%, 0); }
   }
 
   /* Section label chip */
@@ -203,9 +244,16 @@
     position: relative;
     z-index: 1;
   }
+  /* Subtle glow on hover */
+  .btn-magnetic:hover {
+    box-shadow: 0 0 30px hsl(var(--accent) / 0.3), 0 0 60px hsl(var(--accent) / 0.1);
+  }
 
   .btn-ghost {
     @apply relative inline-flex items-center justify-center gap-3 rounded-full border border-foreground/20 px-8 py-4 font-display text-base uppercase tracking-[0.2em] text-foreground transition-all hover:border-accent hover:text-accent;
+  }
+  .btn-ghost:hover {
+    box-shadow: inset 0 0 30px hsl(var(--accent) / 0.08);
   }
 
   /* Marquee */
@@ -230,7 +278,6 @@
   .img-distort > img {
     @apply h-full w-full object-cover;
     transition: transform 1.2s var(--ease-out-expo), filter 0.6s ease;
-    will-change: transform, filter;
   }
   .img-distort:hover > img {
     transform: scale(1.08);
@@ -267,7 +314,7 @@
   }
   .img-distort:hover .scanlines { opacity: 1; }
 
-  /* Glitch-slice bars */
+  /* Glitch-slice bars — PERF: removed expensive backdrop-filter: invert(1) hue-rotate(180deg) */
   .img-distort .glitch-slice {
     position: absolute; inset: 0; pointer-events: none;
     opacity: 0; transition: opacity 0.3s ease;
@@ -276,8 +323,7 @@
   .img-distort .glitch-slice::before,
   .img-distort .glitch-slice::after {
     content: ""; position: absolute; left: 0; right: 0; height: 6%;
-    background: hsl(var(--foreground) / 0.08);
-    backdrop-filter: invert(1) hue-rotate(180deg);
+    background: hsl(var(--accent) / 0.12);
   }
   .img-distort .glitch-slice::before { top: 22%; }
   .img-distort .glitch-slice::after  { top: 68%; height: 3%; }
@@ -307,5 +353,72 @@
   .section-rule::before,
   .section-rule::after {
     content: ""; flex: 1; height: 1px; background: hsl(var(--line));
+  }
+
+  /* ========= Section transition bleed ========= */
+  /* Soft gradient bleed between sections with different backgrounds */
+  .section-bleed-top::before {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: -1px;
+    height: 120px;
+    background: linear-gradient(180deg, hsl(var(--background)), transparent);
+    z-index: 1;
+    pointer-events: none;
+  }
+  .section-bleed-bottom::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    bottom: -1px;
+    height: 120px;
+    background: linear-gradient(0deg, hsl(var(--background)), transparent);
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  /* ========= Input focus underline ========= */
+  .input-field {
+    position: relative;
+    border-bottom: 1px solid hsl(var(--line));
+    transition: border-color 0.4s ease;
+  }
+  .input-field:focus-within {
+    border-color: hsl(var(--accent));
+  }
+  .input-field::after {
+    content: "";
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--gradient-ice);
+    transform: scaleX(0);
+    transform-origin: center;
+    transition: transform 0.5s var(--ease-out-expo);
+  }
+  .input-field:focus-within::after {
+    transform: scaleX(1);
+  }
+
+  /* ========= Back to top button ========= */
+  .back-to-top {
+    @apply fixed bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full border border-accent/40 bg-background/80 text-accent backdrop-blur-sm transition-all;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(20px);
+  }
+  .back-to-top.visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+  .back-to-top:hover {
+    background: hsl(var(--accent));
+    color: hsl(var(--background));
+    border-color: hsl(var(--accent));
+    box-shadow: 0 0 20px hsl(var(--accent) / 0.4);
   }
 }

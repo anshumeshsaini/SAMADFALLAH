@@ -36,6 +36,9 @@ const SignatureShots = () => {
           pin: true,
           anticipatePin: 1,
           invalidateOnRefresh: true,
+          onUpdate: (self) => {
+            gsap.set("#shots-progress", { scaleX: self.progress });
+          },
         },
       });
 
@@ -44,24 +47,40 @@ const SignatureShots = () => {
         scrollTrigger: { trigger: sectionRef.current!, start: "top 70%" },
       });
 
-      // Per-card mouse tilt + inner image parallax
+      // PERF: Per-card mouse tilt + inner image parallax — use quickTo
       const cards = gsap.utils.toArray<HTMLElement>("[data-shot-card]");
       cards.forEach((card) => {
         const img = card.querySelector<HTMLElement>("[data-shot-img]");
         const meta = card.querySelector<HTMLElement>("[data-shot-meta]");
+
+        gsap.set(card, { transformPerspective: 1000 });
+        const qRotY = gsap.quickTo(card, "rotateY", { duration: 0.6, ease: "power3.out" });
+        const qRotX = gsap.quickTo(card, "rotateX", { duration: 0.6, ease: "power3.out" });
+        const qImgX = img ? gsap.quickTo(img, "x", { duration: 0.7, ease: "power3.out" }) : null;
+        const qImgY = img ? gsap.quickTo(img, "y", { duration: 0.7, ease: "power3.out" }) : null;
+        const qMetaX = meta ? gsap.quickTo(meta, "x", { duration: 0.7, ease: "power3.out" }) : null;
+        const qMetaY = meta ? gsap.quickTo(meta, "y", { duration: 0.7, ease: "power3.out" }) : null;
+
         const onMove = (e: MouseEvent) => {
           const r = card.getBoundingClientRect();
           const x = (e.clientX - r.left) / r.width - 0.5;
           const y = (e.clientY - r.top) / r.height - 0.5;
-          gsap.to(card, { rotateY: x * 8, rotateX: -y * 8, transformPerspective: 1000, duration: 0.6, ease: "power3.out" });
-          gsap.to(img, { x: x * 36, y: y * 28, duration: 0.7, ease: "power3.out" });
-          gsap.to(meta, { x: x * -14, y: y * -10, duration: 0.7, ease: "power3.out" });
+          qRotY(x * 8);
+          qRotX(-y * 8);
+          qImgX?.(x * 36);
+          qImgY?.(y * 28);
+          qMetaX?.(x * -14);
+          qMetaY?.(y * -10);
         };
         const onLeave = () => {
-          gsap.to(card, { rotateY: 0, rotateX: 0, duration: 0.8, ease: "power3.out" });
-          gsap.to([img, meta], { x: 0, y: 0, duration: 0.8, ease: "power3.out" });
+          qRotY(0);
+          qRotX(0);
+          qImgX?.(0);
+          qImgY?.(0);
+          qMetaX?.(0);
+          qMetaY?.(0);
         };
-        card.addEventListener("mousemove", onMove);
+        card.addEventListener("mousemove", onMove, { passive: true });
         card.addEventListener("mouseleave", onLeave);
       });
 
@@ -115,10 +134,10 @@ const SignatureShots = () => {
             data-shot-panel
             className="relative flex h-full w-[85vw] flex-shrink-0 items-center px-6 md:w-[55vw] md:px-12"
           >
-            {/* Panel deep parallax glow */}
+            {/* Panel deep parallax glow — PERF: reduced blur from 120-140px to 70-80px */}
             <div data-shot-deep className="pointer-events-none absolute inset-0 will-change-transform">
-              <div className="absolute left-[10%] top-[15%] h-[300px] w-[300px] rounded-full bg-accent/15 blur-[120px]" />
-              <div className="absolute right-[8%] bottom-[10%] h-[360px] w-[360px] rounded-full bg-primary/15 blur-[140px]" />
+              <div className="absolute left-[10%] top-[15%] h-[300px] w-[300px] rounded-full bg-accent/15 blur-[70px]" />
+              <div className="absolute right-[8%] bottom-[10%] h-[360px] w-[360px] rounded-full bg-primary/15 blur-[80px]" />
             </div>
             <button
               onClick={() => setOpen(i)}
@@ -132,6 +151,7 @@ const SignatureShots = () => {
                   src={s.image}
                   alt={s.name}
                   loading="lazy"
+                  decoding="async"
                   width={1200}
                   height={1500}
                 />
@@ -170,6 +190,15 @@ const SignatureShots = () => {
         <div className="flex h-full w-[20vw] flex-shrink-0 items-center justify-center">
           <span className="font-condensed text-xs uppercase tracking-[0.4em] text-muted-foreground">/ end of reel</span>
         </div>
+      </div>
+
+      {/* Horizontal Progress Bar for this section */}
+      <div className="absolute inset-x-8 bottom-12 z-30 flex items-center gap-4 md:inset-x-24">
+        <span className="font-condensed text-[10px] uppercase tracking-[0.4em] text-accent">Arsenal</span>
+        <div className="relative h-px flex-1 bg-white/10">
+          <div id="shots-progress" className="absolute inset-0 origin-left scale-x-0 bg-accent shadow-[0_0_10px_hsl(var(--accent)/0.5)]" />
+        </div>
+        <span className="font-condensed text-[10px] uppercase tracking-[0.4em] text-muted-foreground">04</span>
       </div>
 
       {/* Lightbox */}

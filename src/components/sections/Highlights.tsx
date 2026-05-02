@@ -67,22 +67,32 @@ const Highlights = () => {
         scrollTrigger: { trigger: sectionRef.current!, start: "top bottom", end: "bottom top", scrub: true },
       });
 
-      // Mouse-move tilt on cards
+      // PERF: Mouse-move tilt on cards — use quickTo
       const cards = gsap.utils.toArray<HTMLElement>("[data-hl-card]");
       cards.forEach((card) => {
         const inner = card.querySelector<HTMLElement>("[data-hl-img]");
+        gsap.set(card, { transformPerspective: 800 });
+        const qRotY = gsap.quickTo(card, "rotateY", { duration: 0.6, ease: "power3.out" });
+        const qRotX = gsap.quickTo(card, "rotateX", { duration: 0.6, ease: "power3.out" });
+        const qInnerX = inner ? gsap.quickTo(inner, "x", { duration: 0.6, ease: "power3.out" }) : null;
+        const qInnerY = inner ? gsap.quickTo(inner, "y", { duration: 0.6, ease: "power3.out" }) : null;
+
         const onMove = (e: MouseEvent) => {
           const r = card.getBoundingClientRect();
           const x = (e.clientX - r.left) / r.width - 0.5;
           const y = (e.clientY - r.top) / r.height - 0.5;
-          gsap.to(card, { rotateY: x * 6, rotateX: -y * 6, transformPerspective: 800, duration: 0.6, ease: "power3.out" });
-          gsap.to(inner, { x: x * 30, y: y * 24, duration: 0.6, ease: "power3.out" });
+          qRotY(x * 6);
+          qRotX(-y * 6);
+          qInnerX?.(x * 30);
+          qInnerY?.(y * 24);
         };
         const onLeave = () => {
-          gsap.to(card, { rotateY: 0, rotateX: 0, duration: 0.8, ease: "power3.out" });
-          gsap.to(inner, { x: 0, y: 0, duration: 0.8, ease: "power3.out" });
+          qRotY(0);
+          qRotX(0);
+          qInnerX?.(0);
+          qInnerY?.(0);
         };
-        card.addEventListener("mousemove", onMove);
+        card.addEventListener("mousemove", onMove, { passive: true });
         card.addEventListener("mouseleave", onLeave);
       });
     }, sectionRef);
@@ -91,10 +101,10 @@ const Highlights = () => {
 
   return (
     <section id="highlights" ref={sectionRef} className="relative overflow-hidden bg-background py-32 md:py-48">
-      {/* Multi-layer parallax background */}
-      <div data-hl-bg-deep className="pointer-events-none absolute -left-32 top-1/4 h-[600px] w-[600px] rounded-full bg-primary/10 blur-[140px]" />
-      <div data-hl-bg-mid className="pointer-events-none absolute right-[-10%] top-[40%] h-[480px] w-[480px] rounded-full bg-accent/10 blur-[120px]" />
-      <div data-hl-bg-deep className="pointer-events-none absolute left-[40%] bottom-[5%] h-[380px] w-[380px] rounded-full bg-primary/8 blur-[100px]" />
+      {/* Multi-layer parallax background — PERF: reduced blur from 100-140px to 60-80px */}
+      <div data-hl-bg-deep className="pointer-events-none absolute -left-32 top-1/4 h-[600px] w-[600px] rounded-full bg-primary/10 blur-[80px]" />
+      <div data-hl-bg-mid className="pointer-events-none absolute right-[-10%] top-[40%] h-[480px] w-[480px] rounded-full bg-accent/10 blur-[70px]" />
+      <div data-hl-bg-deep className="pointer-events-none absolute left-[40%] bottom-[5%] h-[380px] w-[380px] rounded-full bg-primary/8 blur-[60px]" />
 
       <div className="container relative">
         <div className="mb-16 flex flex-col items-start justify-between gap-8 md:mb-20 md:flex-row md:items-end">
@@ -123,6 +133,7 @@ const Highlights = () => {
                   src={h.img}
                   alt={h.title}
                   loading="lazy"
+                  decoding="async"
                   width={1200}
                   height={1500}
                 />

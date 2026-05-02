@@ -99,17 +99,23 @@ const Journey = () => {
           scrollTrigger: { trigger: phase, start: "top 65%" },
         });
 
-        // Mouse parallax inside each phase image card
+        // PERF: Mouse parallax inside each phase image card — use quickTo
         const card = phase.querySelector<HTMLElement>("[data-phase-card]");
         if (card && img) {
+          const qX = gsap.quickTo(img, "x", { duration: 0.7, ease: "power3.out" });
+          const qY = gsap.quickTo(img, "y", { duration: 0.7, ease: "power3.out" });
           const onMove = (e: MouseEvent) => {
             const r = card.getBoundingClientRect();
             const x = (e.clientX - r.left) / r.width - 0.5;
             const y = (e.clientY - r.top) / r.height - 0.5;
-            gsap.to(img, { x: x * 30, y: y * 20, duration: 0.7, ease: "power3.out", overwrite: "auto" });
+            qX(x * 30);
+            qY(y * 20);
           };
-          const onLeave = () => gsap.to(img, { x: 0, y: 0, duration: 0.8, ease: "power3.out" });
-          card.addEventListener("mousemove", onMove);
+          const onLeave = () => {
+            qX(0);
+            qY(0);
+          };
+          card.addEventListener("mousemove", onMove, { passive: true });
           card.addEventListener("mouseleave", onLeave);
         }
       });
@@ -119,10 +125,10 @@ const Journey = () => {
 
   return (
     <section id="journey" ref={sectionRef} className="relative overflow-hidden bg-background py-32 md:py-48">
-      {/* Multi-layer parallax bg orbs */}
-      <div data-jn-bg-deep className="pointer-events-none absolute -left-40 top-[10%] h-[560px] w-[560px] rounded-full bg-primary/10 blur-[140px]" />
-      <div data-jn-bg-mid className="pointer-events-none absolute right-[-15%] top-[55%] h-[480px] w-[480px] rounded-full bg-accent/10 blur-[120px]" />
-      <div data-jn-bg-deep className="pointer-events-none absolute left-[35%] bottom-[5%] h-[360px] w-[360px] rounded-full bg-primary/8 blur-[100px]" />
+      {/* Multi-layer parallax bg orbs — PERF: reduced blur from 100-140px to 60-80px */}
+      <div data-jn-bg-deep className="pointer-events-none absolute -left-40 top-[10%] h-[560px] w-[560px] rounded-full bg-primary/10 blur-[80px]" />
+      <div data-jn-bg-mid className="pointer-events-none absolute right-[-15%] top-[55%] h-[480px] w-[480px] rounded-full bg-accent/10 blur-[70px]" />
+      <div data-jn-bg-deep className="pointer-events-none absolute left-[35%] bottom-[5%] h-[360px] w-[360px] rounded-full bg-primary/8 blur-[60px]" />
 
       <div className="container relative">
         <div className="mb-20 max-w-3xl md:mb-32">
@@ -149,6 +155,7 @@ const Journey = () => {
                       src={p.image}
                       alt={p.title}
                       loading="lazy"
+                      decoding="async"
                       className="h-full w-full object-cover"
                       width={1400}
                       height={900}

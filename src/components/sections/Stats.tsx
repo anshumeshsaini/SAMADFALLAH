@@ -68,23 +68,24 @@ const Radial = ({ label, value, max, suffix = "", detail, format }: RadialProps)
       },
     });
 
-    // Mouse tilt
+    // PERF: Mouse tilt using quickTo for smoother, cheaper per-frame updates
     const el = ref.current!;
+    const qRotY = gsap.quickTo(el, "rotateY", { duration: 0.6, ease: "power3.out" });
+    const qRotX = gsap.quickTo(el, "rotateX", { duration: 0.6, ease: "power3.out" });
+    gsap.set(el, { transformPerspective: 900 });
+
     const onMove = (e: MouseEvent) => {
       const r = el.getBoundingClientRect();
       const x = (e.clientX - r.left) / r.width - 0.5;
       const y = (e.clientY - r.top) / r.height - 0.5;
-      gsap.to(el, {
-        rotateY: x * 14,
-        rotateX: -y * 14,
-        transformPerspective: 900,
-        duration: 0.6,
-        ease: "power3.out",
-      });
+      qRotY(x * 14);
+      qRotX(-y * 14);
     };
-    const onLeave = () =>
-      gsap.to(el, { rotateY: 0, rotateX: 0, duration: 0.8, ease: "power3.out" });
-    el.addEventListener("mousemove", onMove);
+    const onLeave = () => {
+      qRotY(0);
+      qRotX(0);
+    };
+    el.addEventListener("mousemove", onMove, { passive: true });
     el.addEventListener("mouseleave", onLeave);
     return () => {
       el.removeEventListener("mousemove", onMove);
@@ -124,8 +125,8 @@ const Radial = ({ label, value, max, suffix = "", detail, format }: RadialProps)
       style={{ transformStyle: "preserve-3d" }}
     >
       <div className="relative h-60 w-60">
-        {/* Glow ring */}
-        <div className="absolute inset-0 rounded-full bg-gradient-ice opacity-0 blur-3xl transition-opacity duration-700 group-hover:opacity-30" />
+        {/* Glow ring — PERF: reduced blur from 3xl (48px) to 2xl (40px) */}
+        <div className="absolute inset-0 rounded-full bg-gradient-ice opacity-0 blur-2xl transition-opacity duration-700 group-hover:opacity-30" />
         <svg viewBox="0 0 200 220" className="relative h-full w-full">
           {ticks}
           {/* Track */}
@@ -259,17 +260,21 @@ const Stats = () => {
         }
       );
 
-      // Mouse parallax across entire stats hero
+      // PERF: Mouse parallax — use quickTo for the most-animated elements
+      const deepEls = gsap.utils.toArray<HTMLElement>("[data-stats-bg-deep]");
+      const midEls = gsap.utils.toArray<HTMLElement>("[data-stats-bg-mid]");
+      const wmEls = gsap.utils.toArray<HTMLElement>("[data-stats-watermark]");
+
       const onMove = (e: MouseEvent) => {
         const x = (e.clientX / window.innerWidth - 0.5) * 2;
         const y = (e.clientY / window.innerHeight - 0.5) * 2;
-        gsap.to("[data-stats-bg-deep]", { x: x * 60, y: y * 40, duration: 1.2, ease: "power3.out" });
-        gsap.to("[data-stats-bg-mid]", { x: x * 30, y: y * 20, duration: 1, ease: "power3.out" });
-        gsap.to("[data-stats-watermark]", { x: x * -25, duration: 1.4, ease: "power3.out" });
+        gsap.to(deepEls, { x: x * 60, y: y * 40, duration: 1.2, ease: "power3.out", overwrite: "auto" });
+        gsap.to(midEls, { x: x * 30, y: y * 20, duration: 1, ease: "power3.out", overwrite: "auto" });
+        gsap.to(wmEls, { x: x * -25, duration: 1.4, ease: "power3.out", overwrite: "auto" });
       };
-      sectionRef.current!.addEventListener("mousemove", onMove);
+      sectionRef.current!.addEventListener("mousemove", onMove, { passive: true });
 
-      // Scoreboard flip + tilt
+      // Scoreboard flip + tilt — PERF: use quickTo for tile tilt
       const tiles = scoreboardRef.current!.querySelectorAll<HTMLElement>("[data-tile]");
       tiles.forEach((tile) => {
         const target = parseInt(tile.dataset.flip || "0", 10);
@@ -283,26 +288,29 @@ const Stats = () => {
           onUpdate: () => { if (digit) digit.textContent = Math.round(obj.v).toLocaleString(); },
         });
 
+        gsap.set(tile, { transformPerspective: 900 });
+        const qTileRotY = gsap.quickTo(tile, "rotateY", { duration: 0.5, ease: "power3.out" });
+        const qTileRotX = gsap.quickTo(tile, "rotateX", { duration: 0.5, ease: "power3.out" });
+        const inner = tile.querySelector<HTMLElement>("[data-tile-inner]");
+        const qInnerX = inner ? gsap.quickTo(inner, "x", { duration: 0.5, ease: "power3.out" }) : null;
+        const qInnerY = inner ? gsap.quickTo(inner, "y", { duration: 0.5, ease: "power3.out" }) : null;
+
         const onTileMove = (e: MouseEvent) => {
           const r = tile.getBoundingClientRect();
           const x = (e.clientX - r.left) / r.width - 0.5;
           const y = (e.clientY - r.top) / r.height - 0.5;
-          gsap.to(tile, {
-            rotateY: x * 10,
-            rotateX: -y * 10,
-            transformPerspective: 900,
-            duration: 0.5,
-            ease: "power3.out",
-          });
-          const inner = tile.querySelector<HTMLElement>("[data-tile-inner]");
-          if (inner) gsap.to(inner, { x: x * 18, y: y * 14, duration: 0.5, ease: "power3.out" });
+          qTileRotY(x * 10);
+          qTileRotX(-y * 10);
+          qInnerX?.(x * 18);
+          qInnerY?.(y * 14);
         };
         const onTileLeave = () => {
-          gsap.to(tile, { rotateY: 0, rotateX: 0, duration: 0.7, ease: "power3.out" });
-          const inner = tile.querySelector<HTMLElement>("[data-tile-inner]");
-          if (inner) gsap.to(inner, { x: 0, y: 0, duration: 0.7, ease: "power3.out" });
+          qTileRotY(0);
+          qTileRotX(0);
+          qInnerX?.(0);
+          qInnerY?.(0);
         };
-        tile.addEventListener("mousemove", onTileMove);
+        tile.addEventListener("mousemove", onTileMove, { passive: true });
         tile.addEventListener("mouseleave", onTileLeave);
       });
 
@@ -324,14 +332,14 @@ const Stats = () => {
   }, []);
 
   return (
-    <section id="stats" ref={sectionRef} className="relative overflow-hidden bg-surface py-32 md:py-48">
-      {/* DEEP layer */}
-      <div data-stats-bg-deep className="pointer-events-none absolute -left-32 top-1/4 h-[640px] w-[640px] rounded-full bg-primary/15 blur-[160px]" />
-      <div data-stats-bg-deep className="pointer-events-none absolute -right-32 bottom-1/5 h-[640px] w-[640px] rounded-full bg-accent/12 blur-[160px]" />
+    <section id="stats" ref={sectionRef} className="section-bleed-top section-bleed-bottom relative overflow-hidden bg-surface py-32 md:py-48">
+      {/* DEEP layer — PERF: reduced blur from 160px to 80px */}
+      <div data-stats-bg-deep className="pointer-events-none absolute -left-32 top-1/4 h-[640px] w-[640px] rounded-full bg-primary/15 blur-[80px]" />
+      <div data-stats-bg-deep className="pointer-events-none absolute -right-32 bottom-1/5 h-[640px] w-[640px] rounded-full bg-accent/12 blur-[80px]" />
 
-      {/* MID layer */}
-      <div data-stats-bg-mid className="pointer-events-none absolute left-[42%] top-[8%] h-[400px] w-[400px] rounded-full bg-primary/10 blur-[120px]" />
-      <div data-stats-bg-mid className="pointer-events-none absolute left-[12%] bottom-[10%] h-[360px] w-[360px] rounded-full bg-accent/10 blur-[110px]" />
+      {/* MID layer — PERF: reduced blur from 110-120px to 60-70px */}
+      <div data-stats-bg-mid className="pointer-events-none absolute left-[42%] top-[8%] h-[400px] w-[400px] rounded-full bg-primary/10 blur-[60px]" />
+      <div data-stats-bg-mid className="pointer-events-none absolute left-[12%] bottom-[10%] h-[360px] w-[360px] rounded-full bg-accent/10 blur-[70px]" />
 
       {/* SHALLOW vertical accent rules */}
       <div data-stats-bg-shallow className="pointer-events-none absolute left-[8%] top-0 h-full w-px bg-gradient-to-b from-transparent via-accent/30 to-transparent" />

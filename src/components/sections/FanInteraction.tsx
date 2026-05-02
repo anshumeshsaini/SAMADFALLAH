@@ -51,33 +51,48 @@ const FanInteraction = () => {
         scrollTrigger: { trigger: sectionRef.current!, start: "top bottom", end: "bottom top", scrub: true },
       });
 
-      // Portrait card mouse tilt + inner image parallax
+      // PERF: Portrait card mouse tilt + inner image parallax — use quickTo
       const card = sectionRef.current!.querySelector<HTMLElement>("[data-fan-card]");
       const img = sectionRef.current!.querySelector<HTMLElement>("[data-fan-img]");
       if (card && img) {
+        gsap.set(card, { transformPerspective: 1000 });
+        const qRotY = gsap.quickTo(card, "rotateY", { duration: 0.6, ease: "power3.out" });
+        const qRotX = gsap.quickTo(card, "rotateX", { duration: 0.6, ease: "power3.out" });
+        const qImgX = gsap.quickTo(img, "x", { duration: 0.7, ease: "power3.out" });
+        const qImgY = gsap.quickTo(img, "y", { duration: 0.7, ease: "power3.out" });
+        const qImgScale = gsap.quickTo(img, "scale", { duration: 0.7, ease: "power3.out" });
+
         const onMove = (e: MouseEvent) => {
           const r = card.getBoundingClientRect();
           const x = (e.clientX - r.left) / r.width - 0.5;
           const y = (e.clientY - r.top) / r.height - 0.5;
-          gsap.to(card, { rotateY: x * 10, rotateX: -y * 10, transformPerspective: 1000, duration: 0.6, ease: "power3.out" });
-          gsap.to(img, { x: x * 30, y: y * 22, scale: 1.05, duration: 0.7, ease: "power3.out" });
+          qRotY(x * 10);
+          qRotX(-y * 10);
+          qImgX(x * 30);
+          qImgY(y * 22);
+          qImgScale(1.05);
         };
         const onLeave = () => {
-          gsap.to(card, { rotateY: 0, rotateX: 0, duration: 0.8, ease: "power3.out" });
-          gsap.to(img, { x: 0, y: 0, scale: 1, duration: 0.8, ease: "power3.out" });
+          qRotY(0);
+          qRotX(0);
+          qImgX(0);
+          qImgY(0);
+          qImgScale(1);
         };
-        card.addEventListener("mousemove", onMove);
+        card.addEventListener("mousemove", onMove, { passive: true });
         card.addEventListener("mouseleave", onLeave);
       }
 
       // Scroll-driven portrait reveal
-      gsap.fromTo("[data-fan-img]",
-        { scale: 1.25, yPercent: 8 },
-        {
-          scale: 1, yPercent: -8, ease: "none",
-          scrollTrigger: { trigger: card!, start: "top bottom", end: "bottom top", scrub: true },
-        }
-      );
+      if (card) {
+        gsap.fromTo("[data-fan-img]",
+          { scale: 1.25, yPercent: 8 },
+          {
+            scale: 1, yPercent: -8, ease: "none",
+            scrollTrigger: { trigger: card, start: "top bottom", end: "bottom top", scrub: true },
+          }
+        );
+      }
     }, sectionRef);
     return () => ctx.revert();
   }, []);
@@ -100,11 +115,11 @@ const FanInteraction = () => {
   ];
 
   return (
-    <section id="fans" ref={sectionRef} className="relative overflow-hidden bg-surface py-32 md:py-48">
-      {/* Multi-layer parallax background */}
-      <div data-fan-bg-deep className="pointer-events-none absolute -left-32 top-1/4 h-[600px] w-[600px] rounded-full bg-primary/15 blur-[140px]" />
-      <div data-fan-bg-deep className="pointer-events-none absolute -right-32 bottom-1/4 h-[600px] w-[600px] rounded-full bg-accent/15 blur-[140px]" />
-      <div data-fan-bg-mid className="pointer-events-none absolute left-[40%] top-[8%] h-[300px] w-[300px] rounded-full bg-accent/10 blur-[100px]" />
+    <section id="fans" ref={sectionRef} className="section-bleed-top section-bleed-bottom relative overflow-hidden bg-surface py-32 md:py-48">
+      {/* Multi-layer parallax background — PERF: reduced blur from 100-140px to 60-80px */}
+      <div data-fan-bg-deep className="pointer-events-none absolute -left-32 top-1/4 h-[600px] w-[600px] rounded-full bg-primary/15 blur-[80px]" />
+      <div data-fan-bg-deep className="pointer-events-none absolute -right-32 bottom-1/4 h-[600px] w-[600px] rounded-full bg-accent/15 blur-[80px]" />
+      <div data-fan-bg-mid className="pointer-events-none absolute left-[40%] top-[8%] h-[300px] w-[300px] rounded-full bg-accent/10 blur-[60px]" />
       <div data-fan-bg-mid className="pointer-events-none absolute left-[8%] top-0 h-full w-px bg-gradient-to-b from-transparent via-accent/20 to-transparent" />
 
       <div className="container relative">
@@ -118,7 +133,7 @@ const FanInteraction = () => {
               style={{ transformStyle: "preserve-3d" }}
             >
               <div data-fan-img className="absolute -inset-4 will-change-transform">
-                <img src={portrait} alt="Portrait of SAMADFALLAH" loading="lazy" className="h-full w-full object-cover" width={1280} height={1600} />
+                <img src={portrait} alt="Portrait of SAMADFALLAH" loading="lazy" decoding="async" className="h-full w-full object-cover" width={1280} height={1600} />
               </div>
               <div className="scanlines" />
               <div className="glitch-slice" />
